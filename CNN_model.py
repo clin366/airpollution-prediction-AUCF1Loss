@@ -197,6 +197,15 @@ def f1_loss(y_true, y_pred):
     f1 = tf.where(tf.is_nan(f1), tf.zeros_like(f1), f1)
     return 1 - K.mean(f1)
 
+# create a differenced series
+def difference(dataset, interval=1):
+    diff = list()
+    diff.extend([0. for i in range(interval)])
+    for i in range(interval, len(dataset)):
+        value = dataset[i] - dataset[i - interval]
+        diff.append(value)
+    return np.array(diff)
+
 def main(file_in, file_out):
     # file_in = '../Re__Research_on_detecting_air_pollution_related_terms_searches_/keywords_data_rescaled_joined.csv'
     # air_data_raw = readData(file_in)
@@ -277,14 +286,21 @@ def main(file_in, file_out):
                     # pollution_value = 50
 
                     raw_values = np.concatenate((y_train, y_valid, y_test), axis=0)
+                    raw_diff = difference(raw_values)
                     # transform data to be supervised learning
                     # supervised_values = timeseries_to_supervised(raw_values, 5)
                     supervised_values = timeseries_to_supervised(raw_values, lag = lag_days)
+                    supervised_diff = timeseries_to_supervised(raw_diff, lag = lag_days)
                     # normalize to 0 to 1
                     # supervised_values = supervised_values/supervised_values.max()
                     # normalize supervised_values
                     supervised_values -= np.mean(supervised_values, axis = 0) # zero-center
                     supervised_values /= np.std(supervised_values, axis = 0) # normalize
+
+                    supervised_diff -= np.mean(supervised_diff, axis = 0) # zero-center
+                    supervised_diff /= np.std(supervised_diff, axis = 0) # normalize
+
+                    supervised_values = np.concatenate((supervised_values, supervised_diff), axis=1)
                         
                     # for input_features in ['pollution_val', 'one-hot-encoding+', 'glove-embedding+']:
                     for with_pollution_val in ['pollution_val', 'with_pol_val', 'without_pol_val']:
@@ -296,6 +312,13 @@ def main(file_in, file_out):
                                 X_concat_frames = pd.concat([X_train, X_valid, X_test])
                                 feature_embeddings = generate_search_embedding(X_concat_frames, representation = 'one-hot')
                                 feature_embeddings = lag_search_features(feature_embeddings, lag = search_lag)
+
+                                X_concat_frames_diff = X_concat_frames.diff()
+                                X_concat_frames_diff = X_concat_frames_diff.fillna(X_concat_frames_diff.mean())
+                                feature_diff_embeddings = generate_search_embedding(X_concat_frames_diff, representation = 'one-hot')
+                                feature_diff_embeddings = lag_search_features(feature_diff_embeddings, lag = search_lag)
+                                feature_embeddings = np.concatenate((feature_embeddings, feature_diff_embeddings), axis=1)
+
                                 if input_features == 'one-hot+':
                                     if with_pollution_val == 'with_pol_val':
                                         x_train_concat = np.concatenate((supervised_values, feature_embeddings), axis=1)
