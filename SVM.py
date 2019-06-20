@@ -221,9 +221,7 @@ def main(file_in, file_out):
             sheet1.write(row_index, col_index, "============" + season + "=============")
             row_index = row_index + 1
             # fo.write("============" + season + "============="+ '\n')
-            # for final_year in [2009,2010,2011,2012,2013]:
-            for final_year in [2012]:
-            # for final_year in [2012]:
+            for final_year in [2009,2010,2011,2012]:
             # for final_year in [2009]:
                 sheet1.write(row_index, col_index, 'Final year: ' + str(final_year))
                 row_index = row_index + 1
